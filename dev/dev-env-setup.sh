@@ -104,6 +104,15 @@ case "$(uname -s)" in
   *)                             machine=unknown;;
 esac
 
+# Detect Linux package manager
+if command -v dnf >/dev/null 2>&1; then
+  pkg_manager=dnf
+elif command -v apt-get >/dev/null 2>&1; then
+  pkg_manager=apt
+else
+  pkg_manager=unknown
+fi
+
 load_progress() {
   if [[ ! -f "$PROGRESS_FILE" ]]; then
     echo "0" > "$PROGRESS_FILE"
@@ -186,10 +195,19 @@ check_and_install_pyenv() {
         brew install pyenv
         brew install openssl readline sqlite3 xz zlib libomp
       elif [[ "$machine" == linux ]]; then
-        sudo apt-get update -y
-        sudo apt-get install -y make build-essential libssl-dev zlib1g-dev \
-          libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
-          libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+        if [[ "$pkg_manager" == dnf ]]; then
+          sudo dnf install -y make gcc zlib-devel bzip2 bzip2-devel readline-devel sqlite \
+            sqlite-devel openssl-devel tk-devel libffi-devel xz-devel wget curl llvm \
+            libxml2-devel xmlsec1-devel patch
+        elif [[ "$pkg_manager" == apt ]]; then
+          sudo apt-get update -y
+          sudo apt-get install -y make build-essential libssl-dev zlib1g-dev \
+            libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
+            libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+        else
+          echo "Unsupported package manager. Please install pyenv dependencies manually: https://github.com/pyenv/pyenv/wiki#suggested-build-environment"
+          exit 1
+        fi
         # Install pyenv from source
         git clone --depth 1 https://github.com/pyenv/pyenv.git "$HOME/.pyenv"
         PYENV_ROOT="$HOME/.pyenv"
@@ -318,11 +336,17 @@ check_and_install_pandoc() {
         check_and_install_brew "pandoc"
         brew install pandoc
       elif [[ "$machine" == linux ]]; then
-        # Install pandoc via deb package as `apt-get` gives too old version
-        TEMP_DEB=$(mktemp) &&
-          wget --directory-prefix $TEMP_DEB https://github.com/jgm/pandoc/releases/download/2.16.2/pandoc-2.16.2-1-amd64.deb &&
-          sudo dpkg --install $(find $TEMP_DEB -name '*.deb') &&
-          rm -rf $TEMP_DEB
+        if [[ "$pkg_manager" == dnf ]]; then
+          sudo dnf install -y pandoc
+        elif [[ "$pkg_manager" == apt ]]; then
+          # Install pandoc via deb package as `apt-get` gives too old version
+          TEMP_DEB=$(mktemp) &&
+            wget --directory-prefix $TEMP_DEB https://github.com/jgm/pandoc/releases/download/2.16.2/pandoc-2.16.2-1-amd64.deb &&
+            sudo dpkg --install $(find $TEMP_DEB -name '*.deb') &&
+            rm -rf $TEMP_DEB
+        else
+          echo "Unsupported package manager. Please install pandoc >= 2.2.1 manually: https://pandoc.org/installing.html"
+        fi
       else
         echo "Unsupported operating system environment: $machine. This setup script only supports MacOS and Linux. For other operating systems, please follow the manual setup instruction here: https://github.com/mlflow/mlflow/blob/master/CONTRIBUTING.md#manual-python-development-environment-configuration "
         exit 1
