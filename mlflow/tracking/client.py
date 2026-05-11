@@ -6724,3 +6724,169 @@ class MlflowClient:
             WebhookTestResult indicating success/failure and response details.
         """
         return self._get_registry_client().test_webhook(webhook_id, event)
+
+    # --- MCP Server Registry ---
+
+    def create_mcp_server(self, name, description=None, icon=None):
+        return self._tracking_client.store.create_mcp_server(
+            name=name, description=description, icon=icon
+        )
+
+    def get_mcp_server(self, name):
+        return self._tracking_client.store.get_mcp_server(name)
+
+    def search_mcp_servers(
+        self, filter_string=None, max_results=100, order_by=None, page_token=None
+    ):
+        return self._tracking_client.store.search_mcp_servers(
+            filter_string=filter_string,
+            max_results=max_results,
+            order_by=order_by,
+            page_token=page_token,
+        )
+
+    def update_mcp_server(
+        self, name, display_name=None, description=None, icon=None, latest_version=None
+    ):
+        return self._tracking_client.store.update_mcp_server(
+            name=name,
+            display_name=display_name,
+            description=description,
+            icon=icon,
+            latest_version=latest_version,
+        )
+
+    def delete_mcp_server(self, name):
+        self._tracking_client.store.delete_mcp_server(name)
+
+    def create_mcp_server_version(
+        self, server_json, display_name=None, source=None, status=None, tools=None
+    ):
+        return self._tracking_client.store.create_mcp_server_version(
+            server_json=server_json,
+            display_name=display_name,
+            source=source,
+            status=status,
+            tools=tools,
+        )
+
+    def get_mcp_server_version(self, name, version):
+        return self._tracking_client.store.get_mcp_server_version(name, version)
+
+    def get_mcp_server_version_by_alias(self, name, alias):
+        return self._tracking_client.store.get_mcp_server_version_by_alias(name, alias)
+
+    def get_latest_mcp_server_version(self, name):
+        return self._tracking_client.store.get_latest_mcp_server_version(name)
+
+    def search_mcp_server_versions(
+        self, name, filter_string=None, max_results=100, order_by=None, page_token=None
+    ):
+        return self._tracking_client.store.search_mcp_server_versions(
+            name=name,
+            filter_string=filter_string,
+            max_results=max_results,
+            order_by=order_by,
+            page_token=page_token,
+        )
+
+    def update_mcp_server_version(
+        self, name, version, display_name=None, status=None, tools=None
+    ):
+        return self._tracking_client.store.update_mcp_server_version(
+            name=name,
+            version=version,
+            display_name=display_name,
+            status=status,
+            tools=tools,
+        )
+
+    def delete_mcp_server_version(self, name, version):
+        self._tracking_client.store.delete_mcp_server_version(name, version)
+
+    def create_mcp_access_binding(
+        self,
+        server_name,
+        endpoint_url,
+        transport_type=None,
+        server_version=None,
+        server_alias=None,
+    ):
+        from mlflow.entities.mcp_server import MCPRemoteTransportType
+
+        tt = (
+            MCPRemoteTransportType(transport_type)
+            if transport_type
+            else MCPRemoteTransportType.STREAMABLE_HTTP
+        )
+        return self._tracking_client.store.create_mcp_access_binding(
+            server_name=server_name,
+            endpoint_url=endpoint_url,
+            transport_type=tt,
+            server_version=server_version,
+            server_alias=server_alias,
+        )
+
+    def get_mcp_access_binding(self, server_name, binding_id):
+        return self._tracking_client.store.get_mcp_access_binding(server_name, binding_id)
+
+    def search_mcp_access_bindings(
+        self,
+        server_name=None,
+        filter_string=None,
+        max_results=100,
+        order_by=None,
+        page_token=None,
+    ):
+        return self._tracking_client.store.search_mcp_access_bindings(
+            server_name=server_name,
+            filter_string=filter_string,
+            max_results=max_results,
+            order_by=order_by,
+            page_token=page_token,
+        )
+
+    def update_mcp_access_binding(
+        self,
+        server_name,
+        binding_id,
+        endpoint_url=None,
+        transport_type=None,
+        server_version=None,
+        server_alias=None,
+    ):
+        from mlflow.entities.mcp_server import MCPRemoteTransportType
+
+        tt = MCPRemoteTransportType(transport_type) if transport_type else None
+        return self._tracking_client.store.update_mcp_access_binding(
+            server_name=server_name,
+            binding_id=binding_id,
+            endpoint_url=endpoint_url,
+            transport_type=tt,
+            server_version=server_version,
+            server_alias=server_alias,
+        )
+
+    def delete_mcp_access_binding(self, server_name, binding_id):
+        self._tracking_client.store.delete_mcp_access_binding(server_name, binding_id)
+
+    def set_mcp_server_tag(self, name, key, value):
+        self._tracking_client.store.set_mcp_server_tag(name, key, value)
+
+    def delete_mcp_server_tag(self, name, key):
+        self._tracking_client.store.delete_mcp_server_tag(name, key)
+
+    def set_mcp_server_version_tag(self, name, version, key, value):
+        self._tracking_client.store.set_mcp_server_version_tag(name, version, key, value)
+
+    def delete_mcp_server_version_tag(self, name, version, key):
+        self._tracking_client.store.delete_mcp_server_version_tag(name, version, key)
+
+    def set_mcp_server_alias(self, name, alias, version):
+        self._tracking_client.store.set_mcp_server_alias(name, alias, version)
+
+    def delete_mcp_server_alias(self, name, alias):
+        self._tracking_client.store.delete_mcp_server_alias(name, alias)
+
+    def link_mcp_server_versions_to_trace(self, trace_id, mcp_servers):
+        self._tracking_client.store.link_mcp_server_versions_to_trace(trace_id, mcp_servers)
