@@ -3961,7 +3961,70 @@ def _find_fastapi_validator(path: str) -> Callable[[str, StarletteRequest], Awai
     if path.startswith("/ajax-api/3.0/mlflow/assistant"):
         return _get_require_authentication_validator()
 
+    if path.startswith("/ajax-api/3.0/mlflow/mcp-servers"):
+        return _get_mcp_server_validator(path)
+
     return None
+
+
+def _get_mcp_server_validator(
+    path: str,
+) -> Callable[[str, StarletteRequest], Awaitable[bool]] | None:
+    """Return a validator for MCP server registry routes.
+
+    Uses resource-level permissions with resource_type="mcp_server" and the
+    server name extracted from the URL path as the resource_key. Read
+    operations require READ permission; write operations require MANAGE.
+    """
+
+    async def _validate_mcp_server(username: str, request: StarletteRequest) -> bool:
+        from mlflow.utils.workspace_context import get_request_workspace
+
+        method = request.method.upper()
+        workspace_name = get_request_workspace() or DEFAULT_WORKSPACE_NAME
+
+        server_name = _extract_mcp_server_name(path)
+
+        if method in ("GET", "HEAD"):
+            required = "READ"
+        else:
+            required = "MANAGE"
+
+        perm = _get_role_permission_or_default(
+            _role_permission_for(
+                username=username,
+                resource_type="mcp_server",
+                resource_key=server_name or "*",
+                workspace_lookup_id=workspace_name,
+                workspace_fetcher=lambda _: None,
+                workspace_label="mcp_server",
+            ),
+        )
+        if required == "READ":
+            return perm.can_read
+        return perm.can_manage
+
+    return _validate_mcp_server
+
+
+def _extract_mcp_server_name(path: str) -> str | None:
+    """Extract the MCP server name from a request path.
+
+    Paths look like /ajax-api/3.0/mlflow/mcp-servers/{name}/...
+    where {name} can contain slashes (uses :path).
+    """
+    prefix = "/ajax-api/3.0/mlflow/mcp-servers/"
+    if not path.startswith(prefix):
+        return None
+    rest = path[len(prefix):]
+    if not rest or rest == "/":
+        return None
+    # Strip known sub-resource segments from the end
+    for segment in ("/versions", "/bindings", "/tags", "/aliases"):
+        idx = rest.find(segment)
+        if idx > 0:
+            return rest[:idx]
+    return rest.rstrip("/")
 
 
 def add_fastapi_permission_middleware(app: FastAPI) -> None:

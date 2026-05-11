@@ -54,7 +54,7 @@ def test_mcp_server_default_fields():
     assert server.display_name is None
     assert server.description is None
     assert server.icon is None
-    assert server.workspace is None
+    assert server.workspace == "default"
     assert server.status is None
     assert server.tags == {}
     assert server.aliases == {}
