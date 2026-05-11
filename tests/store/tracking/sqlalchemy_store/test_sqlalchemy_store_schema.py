@@ -386,6 +386,48 @@ def _insert_row(conn, table_name, workspace, overrides=None, seed=1):
             "retry_count": 0,
             "last_update_time": seed,
         },
+        "mcp_servers": {
+            "workspace": workspace,
+            "name": f"mcp_server_{seed}",
+            "created_at": seed,
+            "last_updated_at": seed,
+        },
+        "mcp_server_versions": {
+            "workspace": workspace,
+            "name": f"mcp_server_{seed}",
+            "version": f"v{seed}",
+            "server_json": "{}",
+            "status": "DRAFT",
+            "created_at": seed,
+            "last_updated_at": seed,
+        },
+        "mcp_server_tags": {
+            "workspace": workspace,
+            "name": f"mcp_server_{seed}",
+            "key": f"tag_{seed}",
+            "value": f"value_{seed}",
+        },
+        "mcp_server_version_tags": {
+            "workspace": workspace,
+            "name": f"mcp_server_{seed}",
+            "version": f"v{seed}",
+            "key": f"vtag_{seed}",
+            "value": f"value_{seed}",
+        },
+        "mcp_server_aliases": {
+            "workspace": workspace,
+            "name": f"mcp_server_{seed}",
+            "alias": f"alias_{seed}",
+            "version": f"v{seed}",
+        },
+        "mcp_access_bindings": {
+            "workspace": workspace,
+            "server_name": f"mcp_server_{seed}",
+            "endpoint_url": f"http://localhost/{seed}",
+            "transport_type": "STREAMABLE_HTTP",
+            "created_at": seed,
+            "last_updated_at": seed,
+        },
     }
     if table_name not in base_values:
         raise AssertionError(f"Unexpected table: {table_name}")
