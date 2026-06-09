@@ -114,13 +114,13 @@ def test_rest_client_url_encodes_slashed_name_and_version():
 
 
 def test_create_and_get_server(rest_client):
-    server = rest_client.create_mcp_server("my-server", description="A server")
-    assert server.name == "my-server"
+    server = rest_client.create_mcp_server("io.github.test/my-server", description="A server")
+    assert server.name == "io.github.test/my-server"
     assert server.description == "A server"
     assert server.creation_timestamp is not None
 
-    fetched = rest_client.get_mcp_server("my-server")
-    assert fetched.name == "my-server"
+    fetched = rest_client.get_mcp_server("io.github.test/my-server")
+    assert fetched.name == "io.github.test/my-server"
     assert fetched.description == "A server"
 
 
@@ -133,7 +133,11 @@ def test_create_and_get_server_with_slashed_name(rest_client):
 
 
 def test_search_servers_pagination(rest_client):
-    for name in ["alpha", "beta", "gamma"]:
+    for name in [
+        "io.github.test/alpha",
+        "io.github.test/beta",
+        "io.github.test/gamma",
+    ]:
         rest_client.create_mcp_server(name)
     page1 = rest_client.search_mcp_servers(max_results=2)
     assert len(page1) == 2
@@ -144,41 +148,43 @@ def test_search_servers_pagination(rest_client):
 
 
 def test_update_server(rest_client):
-    rest_client.create_mcp_server("upd")
-    updated = rest_client.update_mcp_server("upd", description="new desc", display_name="Upd")
+    rest_client.create_mcp_server("io.github.test/upd")
+    updated = rest_client.update_mcp_server(
+        "io.github.test/upd", description="new desc", display_name="Upd"
+    )
     assert updated.description == "new desc"
     assert updated.display_name == "Upd"
 
 
 def test_update_server_can_clear_nullable_fields(rest_client):
-    rest_client.create_mcp_server("clear-srv", description="old")
-    updated = rest_client.update_mcp_server("clear-srv", description=None)
+    rest_client.create_mcp_server("io.github.test/clear-srv", description="old")
+    updated = rest_client.update_mcp_server("io.github.test/clear-srv", description=None)
     assert updated.description is None
 
 
 def test_delete_server(rest_client):
-    rest_client.create_mcp_server("del")
-    rest_client.delete_mcp_server("del")
+    rest_client.create_mcp_server("io.github.test/del")
+    rest_client.delete_mcp_server("io.github.test/del")
     with pytest.raises(MlflowException, match="not found") as exc_info:
-        rest_client.get_mcp_server("del")
+        rest_client.get_mcp_server("io.github.test/del")
     assert exc_info.value.error_code == "RESOURCE_DOES_NOT_EXIST"
 
 
 def test_create_duplicate_server_preserves_error_code(rest_client):
-    rest_client.create_mcp_server("dup")
+    rest_client.create_mcp_server("io.github.test/dup")
     with pytest.raises(MlflowException, match="already exists") as exc_info:
-        rest_client.create_mcp_server("dup")
+        rest_client.create_mcp_server("io.github.test/dup")
     assert exc_info.value.error_code == "RESOURCE_ALREADY_EXISTS"
 
 
 def test_create_and_get_version(rest_client):
-    sj = _server_json("v-srv", "1.0", title="Test")
+    sj = _server_json("io.github.test/v-srv", "1.0", title="Test")
     ver = rest_client.create_mcp_server_version(sj, status=MCPStatus.ACTIVE)
-    assert ver.name == "v-srv"
+    assert ver.name == "io.github.test/v-srv"
     assert ver.version == "1.0"
     assert ver.status == MCPStatus.ACTIVE
 
-    fetched = rest_client.get_mcp_server_version("v-srv", "1.0")
+    fetched = rest_client.get_mcp_server_version("io.github.test/v-srv", "1.0")
     assert fetched.version == "1.0"
     assert fetched.server_json["title"] == "Test"
 
@@ -197,7 +203,7 @@ def test_create_and_get_version_with_slashed_name_and_version(rest_client):
 
 
 def test_create_version_with_tools(rest_client):
-    sj = _server_json("tools-srv", "1.0")
+    sj = _server_json("io.github.test/tools-srv", "1.0")
     tools = [MCPTool(name="search", description="Search the web")]
     ver = rest_client.create_mcp_server_version(sj, status=MCPStatus.ACTIVE, tools=tools)
     assert len(ver.tools) == 1
@@ -205,29 +211,33 @@ def test_create_version_with_tools(rest_client):
 
 
 def test_create_version_preserves_empty_tools_list(rest_client):
-    sj = _server_json("empty-tools-srv", "1.0")
+    sj = _server_json("io.github.test/empty-tools-srv", "1.0")
     ver = rest_client.create_mcp_server_version(sj, status=MCPStatus.ACTIVE, tools=[])
     assert ver.tools == []
 
 
 def test_get_latest_version(rest_client):
     for v in ["1.0", "2.0"]:
-        rest_client.create_mcp_server_version(_server_json("lat", v), status=MCPStatus.ACTIVE)
-    latest = rest_client.get_latest_mcp_server_version("lat")
+        rest_client.create_mcp_server_version(
+            _server_json("io.github.test/lat", v), status=MCPStatus.ACTIVE
+        )
+    latest = rest_client.get_latest_mcp_server_version("io.github.test/lat")
     assert latest.version == "2.0"
 
 
 def test_version_named_latest_round_trips_via_version_route(rest_client):
     rest_client.create_mcp_server_version(
-        _server_json("lat-literal", "latest"), status=MCPStatus.ACTIVE
+        _server_json("io.github.test/lat-literal", "latest"), status=MCPStatus.ACTIVE
     )
     rest_client.create_mcp_server_version(
-        _server_json("lat-literal", "2.0"), status=MCPStatus.ACTIVE
+        _server_json("io.github.test/lat-literal", "2.0"), status=MCPStatus.ACTIVE
     )
-    rest_client.update_mcp_server("lat-literal", latest_version="2.0")
+    rest_client.update_mcp_server("io.github.test/lat-literal", latest_version="2.0")
 
-    version_named_latest = rest_client.get_mcp_server_version("lat-literal", "latest")
-    computed_latest = rest_client.get_latest_mcp_server_version("lat-literal")
+    version_named_latest = rest_client.get_mcp_server_version(
+        "io.github.test/lat-literal", "latest"
+    )
+    computed_latest = rest_client.get_latest_mcp_server_version("io.github.test/lat-literal")
 
     assert version_named_latest.version == "latest"
     assert computed_latest.version == "2.0"
@@ -235,39 +245,47 @@ def test_version_named_latest_round_trips_via_version_route(rest_client):
 
 def test_search_versions(rest_client):
     for v in ["1.0", "2.0", "3.0"]:
-        rest_client.create_mcp_server_version(_server_json("sv", v), status=MCPStatus.ACTIVE)
-    results = rest_client.search_mcp_server_versions("sv", max_results=2)
+        rest_client.create_mcp_server_version(
+            _server_json("io.github.test/sv", v), status=MCPStatus.ACTIVE
+        )
+    results = rest_client.search_mcp_server_versions("io.github.test/sv", max_results=2)
     assert len(results) == 2
     assert results.token is not None
 
 
 def test_update_version(rest_client):
-    rest_client.create_mcp_server_version(_server_json("uv", "1.0"))
-    updated = rest_client.update_mcp_server_version("uv", "1.0", status=MCPStatus.ACTIVE)
+    rest_client.create_mcp_server_version(_server_json("io.github.test/uv", "1.0"))
+    updated = rest_client.update_mcp_server_version(
+        "io.github.test/uv", "1.0", status=MCPStatus.ACTIVE
+    )
     assert updated.status == MCPStatus.ACTIVE
 
 
 def test_update_version_can_clear_display_name(rest_client):
     rest_client.create_mcp_server_version(
-        _server_json("uv-clear", "1.0"), display_name="v1", status=MCPStatus.ACTIVE
+        _server_json("io.github.test/uv-clear", "1.0"), display_name="v1", status=MCPStatus.ACTIVE
     )
-    updated = rest_client.update_mcp_server_version("uv-clear", "1.0", display_name=None)
+    updated = rest_client.update_mcp_server_version(
+        "io.github.test/uv-clear", "1.0", display_name=None
+    )
     assert updated.display_name is None
 
 
 def test_update_version_preserves_empty_tools_list(rest_client):
     rest_client.create_mcp_server_version(
-        _server_json("uv-empty-tools", "1.0"),
+        _server_json("io.github.test/uv-empty-tools", "1.0"),
         status=MCPStatus.ACTIVE,
         tools=[MCPTool(name="search", description="Search the web")],
     )
-    updated = rest_client.update_mcp_server_version("uv-empty-tools", "1.0", tools=[])
+    updated = rest_client.update_mcp_server_version(
+        "io.github.test/uv-empty-tools", "1.0", tools=[]
+    )
     assert updated.tools == []
 
 
 def test_delete_version(rest_client):
-    rest_client.create_mcp_server_version(_server_json("dv", "1.0"))
-    rest_client.delete_mcp_server_version("dv", "1.0")
+    rest_client.create_mcp_server_version(_server_json("io.github.test/dv", "1.0"))
+    rest_client.delete_mcp_server_version("io.github.test/dv", "1.0")
 
 
 def test_create_version_missing_name_raises_mlflow_exception(rest_client):
@@ -277,34 +295,38 @@ def test_create_version_missing_name_raises_mlflow_exception(rest_client):
 
 
 def test_create_and_get_binding(rest_client):
-    rest_client.create_mcp_server_version(_server_json("b-srv", "1.0"), status=MCPStatus.ACTIVE)
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/b-srv", "1.0"), status=MCPStatus.ACTIVE
+    )
     binding = rest_client.create_mcp_access_binding(
-        server_name="b-srv",
+        server_name="io.github.test/b-srv",
         endpoint_url="https://mcp.example.com",
         server_version="1.0",
     )
-    assert binding.server_name == "b-srv"
+    assert binding.server_name == "io.github.test/b-srv"
     assert binding.endpoint_url == "https://mcp.example.com"
 
-    fetched = rest_client.get_mcp_access_binding("b-srv", binding.binding_id)
+    fetched = rest_client.get_mcp_access_binding("io.github.test/b-srv", binding.binding_id)
     assert fetched.endpoint_url == "https://mcp.example.com"
 
 
 def test_get_binding_includes_resolved_version(rest_client):
-    rest_client.create_mcp_server_version(_server_json("brv", "1.0"), status=MCPStatus.ACTIVE)
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/brv", "1.0"), status=MCPStatus.ACTIVE
+    )
     binding = rest_client.create_mcp_access_binding(
-        server_name="brv",
+        server_name="io.github.test/brv",
         endpoint_url="https://mcp.example.com/brv",
         server_version="1.0",
     )
-    fetched = rest_client.get_mcp_access_binding("brv", binding.binding_id)
+    fetched = rest_client.get_mcp_access_binding("io.github.test/brv", binding.binding_id)
     assert fetched.resolved_version is not None
-    assert fetched.resolved_version.name == "brv"
+    assert fetched.resolved_version.name == "io.github.test/brv"
     assert fetched.resolved_version.version == "1.0"
 
 
 def test_search_bindings_workspace_wide(rest_client):
-    for name in ["ws-a", "ws-b"]:
+    for name in ["io.github.test/ws-a", "io.github.test/ws-b"]:
         rest_client.create_mcp_server_version(_server_json(name, "1.0"), status=MCPStatus.ACTIVE)
         rest_client.create_mcp_access_binding(
             server_name=name,
@@ -316,41 +338,45 @@ def test_search_bindings_workspace_wide(rest_client):
 
 
 def test_search_bindings_include_resolved_version_via_alias(rest_client):
-    rest_client.create_mcp_server_version(_server_json("sbra", "1.0"), status=MCPStatus.ACTIVE)
-    rest_client.set_mcp_server_alias("sbra", "prod", "1.0")
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/sbra", "1.0"), status=MCPStatus.ACTIVE
+    )
+    rest_client.set_mcp_server_alias("io.github.test/sbra", "prod", "1.0")
     rest_client.create_mcp_access_binding(
-        server_name="sbra",
+        server_name="io.github.test/sbra",
         endpoint_url="https://mcp.example.com/sbra",
         server_alias="prod",
     )
-    results = rest_client.search_mcp_access_bindings(server_name="sbra")
+    results = rest_client.search_mcp_access_bindings(server_name="io.github.test/sbra")
     assert len(results) == 1
     assert results[0].resolved_version is not None
     assert results[0].resolved_version.version == "1.0"
 
 
 def test_search_bindings_server_scoped(rest_client):
-    for name in ["sc-a", "sc-b"]:
+    for name in ["io.github.test/sc-a", "io.github.test/sc-b"]:
         rest_client.create_mcp_server_version(_server_json(name, "1.0"), status=MCPStatus.ACTIVE)
         rest_client.create_mcp_access_binding(
             server_name=name,
             endpoint_url=f"https://mcp.example.com/{name}",
             server_version="1.0",
         )
-    results = rest_client.search_mcp_access_bindings(server_name="sc-a")
+    results = rest_client.search_mcp_access_bindings(server_name="io.github.test/sc-a")
     assert len(results) == 1
-    assert results[0].server_name == "sc-a"
+    assert results[0].server_name == "io.github.test/sc-a"
 
 
 def test_update_binding(rest_client):
-    rest_client.create_mcp_server_version(_server_json("ub", "1.0"), status=MCPStatus.ACTIVE)
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/ub", "1.0"), status=MCPStatus.ACTIVE
+    )
     binding = rest_client.create_mcp_access_binding(
-        server_name="ub",
+        server_name="io.github.test/ub",
         endpoint_url="https://old.example.com",
         server_version="1.0",
     )
     updated = rest_client.update_mcp_access_binding(
-        server_name="ub",
+        server_name="io.github.test/ub",
         binding_id=binding.binding_id,
         endpoint_url="https://new.example.com",
     )
@@ -358,115 +384,131 @@ def test_update_binding(rest_client):
 
 
 def test_delete_binding(rest_client):
-    rest_client.create_mcp_server_version(_server_json("db", "1.0"), status=MCPStatus.ACTIVE)
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/db", "1.0"), status=MCPStatus.ACTIVE
+    )
     binding = rest_client.create_mcp_access_binding(
-        server_name="db",
+        server_name="io.github.test/db",
         endpoint_url="https://mcp.example.com",
         server_version="1.0",
     )
-    rest_client.delete_mcp_access_binding("db", binding.binding_id)
+    rest_client.delete_mcp_access_binding("io.github.test/db", binding.binding_id)
     with pytest.raises(MlflowException, match="not found"):
-        rest_client.get_mcp_access_binding("db", binding.binding_id)
+        rest_client.get_mcp_access_binding("io.github.test/db", binding.binding_id)
 
 
 def test_server_tags(rest_client):
-    rest_client.create_mcp_server("tag-srv")
-    rest_client.set_mcp_server_tag("tag-srv", "env", "prod")
-    server = rest_client.get_mcp_server("tag-srv")
+    rest_client.create_mcp_server("io.github.test/tag-srv")
+    rest_client.set_mcp_server_tag("io.github.test/tag-srv", "env", "prod")
+    server = rest_client.get_mcp_server("io.github.test/tag-srv")
     assert server.tags["env"] == "prod"
 
-    rest_client.delete_mcp_server_tag("tag-srv", "env")
-    server = rest_client.get_mcp_server("tag-srv")
+    rest_client.delete_mcp_server_tag("io.github.test/tag-srv", "env")
+    server = rest_client.get_mcp_server("io.github.test/tag-srv")
     assert "env" not in server.tags
 
 
 def test_server_tag_with_slash_key(rest_client):
-    rest_client.create_mcp_server("slash-tag-srv")
-    rest_client.set_mcp_server_tag("slash-tag-srv", "team/platform", "prod")
-    server = rest_client.get_mcp_server("slash-tag-srv")
+    rest_client.create_mcp_server("io.github.test/slash-tag-srv")
+    rest_client.set_mcp_server_tag("io.github.test/slash-tag-srv", "team/platform", "prod")
+    server = rest_client.get_mcp_server("io.github.test/slash-tag-srv")
     assert server.tags["team/platform"] == "prod"
 
-    rest_client.delete_mcp_server_tag("slash-tag-srv", "team/platform")
-    server = rest_client.get_mcp_server("slash-tag-srv")
+    rest_client.delete_mcp_server_tag("io.github.test/slash-tag-srv", "team/platform")
+    server = rest_client.get_mcp_server("io.github.test/slash-tag-srv")
     assert "team/platform" not in server.tags
 
 
 def test_version_tags(rest_client):
-    rest_client.create_mcp_server_version(_server_json("vt", "1.0"), status=MCPStatus.ACTIVE)
-    rest_client.set_mcp_server_version_tag("vt", "1.0", "stage", "beta")
-    ver = rest_client.get_mcp_server_version("vt", "1.0")
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/vt", "1.0"), status=MCPStatus.ACTIVE
+    )
+    rest_client.set_mcp_server_version_tag("io.github.test/vt", "1.0", "stage", "beta")
+    ver = rest_client.get_mcp_server_version("io.github.test/vt", "1.0")
     assert ver.tags["stage"] == "beta"
 
-    rest_client.delete_mcp_server_version_tag("vt", "1.0", "stage")
-    ver = rest_client.get_mcp_server_version("vt", "1.0")
+    rest_client.delete_mcp_server_version_tag("io.github.test/vt", "1.0", "stage")
+    ver = rest_client.get_mcp_server_version("io.github.test/vt", "1.0")
     assert "stage" not in ver.tags
 
 
 def test_version_tag_with_slash_key(rest_client):
-    rest_client.create_mcp_server_version(_server_json("slash-vt", "1.0"), status=MCPStatus.ACTIVE)
-    rest_client.set_mcp_server_version_tag("slash-vt", "1.0", "team/platform", "beta")
-    ver = rest_client.get_mcp_server_version("slash-vt", "1.0")
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/slash-vt", "1.0"), status=MCPStatus.ACTIVE
+    )
+    rest_client.set_mcp_server_version_tag(
+        "io.github.test/slash-vt", "1.0", "team/platform", "beta"
+    )
+    ver = rest_client.get_mcp_server_version("io.github.test/slash-vt", "1.0")
     assert ver.tags["team/platform"] == "beta"
 
-    rest_client.delete_mcp_server_version_tag("slash-vt", "1.0", "team/platform")
-    ver = rest_client.get_mcp_server_version("slash-vt", "1.0")
+    rest_client.delete_mcp_server_version_tag("io.github.test/slash-vt", "1.0", "team/platform")
+    ver = rest_client.get_mcp_server_version("io.github.test/slash-vt", "1.0")
     assert "team/platform" not in ver.tags
 
 
 def test_set_and_resolve_alias(rest_client):
-    rest_client.create_mcp_server_version(_server_json("alias-srv", "1.0"), status=MCPStatus.ACTIVE)
-    rest_client.set_mcp_server_alias("alias-srv", "prod", "1.0")
-    ver = rest_client.get_mcp_server_version_by_alias("alias-srv", "prod")
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/alias-srv", "1.0"), status=MCPStatus.ACTIVE
+    )
+    rest_client.set_mcp_server_alias("io.github.test/alias-srv", "prod", "1.0")
+    ver = rest_client.get_mcp_server_version_by_alias("io.github.test/alias-srv", "prod")
     assert ver.version == "1.0"
 
 
 def test_alias_with_slash_round_trips(rest_client):
     rest_client.create_mcp_server_version(
-        _server_json("slash-alias", "1.0"), status=MCPStatus.ACTIVE
+        _server_json("io.github.test/slash-alias", "1.0"), status=MCPStatus.ACTIVE
     )
-    rest_client.set_mcp_server_alias("slash-alias", "team/prod", "1.0")
-    ver = rest_client.get_mcp_server_version_by_alias("slash-alias", "team/prod")
+    rest_client.set_mcp_server_alias("io.github.test/slash-alias", "team/prod", "1.0")
+    ver = rest_client.get_mcp_server_version_by_alias("io.github.test/slash-alias", "team/prod")
     assert ver.version == "1.0"
-    rest_client.delete_mcp_server_alias("slash-alias", "team/prod")
+    rest_client.delete_mcp_server_alias("io.github.test/slash-alias", "team/prod")
     with pytest.raises(MlflowException, match="not found"):
-        rest_client.get_mcp_server_version_by_alias("slash-alias", "team/prod")
+        rest_client.get_mcp_server_version_by_alias("io.github.test/slash-alias", "team/prod")
 
 
 def test_delete_alias(rest_client):
-    rest_client.create_mcp_server_version(_server_json("da", "1.0"), status=MCPStatus.ACTIVE)
-    rest_client.set_mcp_server_alias("da", "staging", "1.0")
-    rest_client.delete_mcp_server_alias("da", "staging")
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/da", "1.0"), status=MCPStatus.ACTIVE
+    )
+    rest_client.set_mcp_server_alias("io.github.test/da", "staging", "1.0")
+    rest_client.delete_mcp_server_alias("io.github.test/da", "staging")
 
 
 def test_server_aliases_dict_format(rest_client):
-    rest_client.create_mcp_server_version(_server_json("rt", "1.0"), status=MCPStatus.ACTIVE)
-    rest_client.set_mcp_server_alias("rt", "prod", "1.0")
-    server = rest_client.get_mcp_server("rt")
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/rt", "1.0"), status=MCPStatus.ACTIVE
+    )
+    rest_client.set_mcp_server_alias("io.github.test/rt", "prod", "1.0")
+    server = rest_client.get_mcp_server("io.github.test/rt")
     assert isinstance(server.aliases, dict)
     assert server.aliases["prod"] == "1.0"
 
 
 def test_server_access_bindings_include_resolved_version(rest_client):
-    rest_client.create_mcp_server_version(_server_json("srv-bind", "1.0"), status=MCPStatus.ACTIVE)
+    rest_client.create_mcp_server_version(
+        _server_json("io.github.test/srv-bind", "1.0"), status=MCPStatus.ACTIVE
+    )
     rest_client.create_mcp_access_binding(
-        server_name="srv-bind",
+        server_name="io.github.test/srv-bind",
         endpoint_url="https://mcp.example.com/srv-bind",
         server_version="1.0",
     )
-    server = rest_client.get_mcp_server("srv-bind")
+    server = rest_client.get_mcp_server("io.github.test/srv-bind")
     assert len(server.access_bindings) == 1
     assert server.access_bindings[0].resolved_version is not None
     assert server.access_bindings[0].resolved_version.version == "1.0"
 
 
 def test_server_json_extra_fields(rest_client):
-    sj = _server_json("extra", "1.0", custom_field="hello")
+    sj = _server_json("io.github.test/extra", "1.0", custom_field="hello")
     ver = rest_client.create_mcp_server_version(sj, status=MCPStatus.ACTIVE)
     assert ver.server_json["custom_field"] == "hello"
 
 
 def test_server_json_explicit_nulls_preserved(rest_client):
-    sj = _server_json("null-extra", "1.0", description=None, custom_field=None)
+    sj = _server_json("io.github.test/null-extra", "1.0", description=None, custom_field=None)
     ver = rest_client.create_mcp_server_version(sj, status=MCPStatus.ACTIVE)
     assert "description" in ver.server_json
     assert ver.server_json["description"] is None
@@ -476,7 +518,7 @@ def test_server_json_explicit_nulls_preserved(rest_client):
 
 
 def test_tools_round_trip(rest_client):
-    sj = _server_json("tools-rt", "1.0")
+    sj = _server_json("io.github.test/tools-rt", "1.0")
     tools = [
         MCPTool(
             name="search",
